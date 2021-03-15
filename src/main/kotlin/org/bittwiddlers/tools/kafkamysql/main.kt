@@ -3,9 +3,9 @@ package org.bittwiddlers.tools.kafkamysql
 import com.fasterxml.jackson.core.type.TypeReference
 import com.fasterxml.jackson.databind.ObjectMapper
 import com.fasterxml.jackson.dataformat.yaml.YAMLFactory
-import org.bittwiddlers.env.EnvVars
-import org.bittwiddlers.kafka.JacksonSerde
-import org.bittwiddlers.kafka.extractKafkaProperties
+import com.jayway.jsonpath.Configuration
+import com.jayway.jsonpath.JsonPath
+import com.jayway.jsonpath.Option
 import com.zaxxer.hikari.HikariConfig
 import com.zaxxer.hikari.HikariDataSource
 import org.apache.kafka.common.serialization.Serdes
@@ -14,6 +14,9 @@ import org.apache.kafka.streams.StreamsBuilder
 import org.apache.kafka.streams.StreamsConfig
 import org.apache.kafka.streams.kstream.Consumed
 import org.apache.kafka.streams.kstream.Named
+import org.bittwiddlers.env.EnvVars
+import org.bittwiddlers.kafka.JacksonSerde
+import org.bittwiddlers.kafka.extractKafkaProperties
 import java.util.Properties
 import java.util.concurrent.CountDownLatch
 
@@ -49,7 +52,7 @@ class Main {
     }
 
     val tableCount = mappingRoot.topics?.values?.sumOf { topic ->
-      topic.events?.values?.sumOf { event ->
+      topic.events?.sumOf { event ->
         event.tables?.size ?: 0
       } ?: 0
     } ?: 1
@@ -71,16 +74,21 @@ class Main {
     // build topology:
     val builder = StreamsBuilder()
 
+    val config = Configuration.defaultConfiguration().setOptions(Option.SUPPRESS_EXCEPTIONS, Option.ALWAYS_RETURN_LIST)
+
     for (topic in mappingRoot.topics ?: emptyMap()) {
       val stream = builder.stream(topic.key, Consumed.with(keySerde, valueSerde))
-      for (event in topic.value.events ?: emptyMap()) {
-        val streamFiltered = stream.filter { _, v -> v["type"] == event.key }
+      for (event in topic.value.events ?: emptyList()) {
+        val filterPath = JsonPath.compile(event.filter)
+        val streamFiltered = stream.filter { _, v ->
+          JsonPath.parse(v, config).read<List<Any?>>(filterPath)?.size == 1
+        }
 
-        for (table in event.value.tables ?: emptyMap()) {
+        for (table in event.tables ?: emptyMap()) {
           // create and populate the table:
           streamFiltered.process(
             { TablePopulator(ds, json, table) },
-            Named.`as`("${event.key}-to-${table.key}")
+            Named.`as`("${table.key}")
           )
         }
       }

@@ -15,10 +15,11 @@ class MappingRoot {
 }
 
 class Topic {
-  var events: LinkedHashMap<String, Event>? = null
+  var events: List<Event>? = null
 }
 
 class Event {
+  var filter: String? = null
   var tables: LinkedHashMap<String, Table>? = null
 }
 
