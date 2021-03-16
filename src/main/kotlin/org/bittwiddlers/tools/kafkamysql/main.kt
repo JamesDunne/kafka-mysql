@@ -43,8 +43,12 @@ class Main {
       env.extractKafkaProperties("STREAMS_", StreamsConfig.configDef())
     )
     props[StreamsConfig.DEFAULT_KEY_SERDE_CLASS_CONFIG] = Serdes.StringSerde::class.java.name
+
+    // set number of stream threads if not set:
     val numThreads = Runtime.getRuntime().availableProcessors()
-    props[StreamsConfig.NUM_STREAM_THREADS_CONFIG] = numThreads
+    if (!props.containsKey(StreamsConfig.NUM_STREAM_THREADS_CONFIG)) {
+      props[StreamsConfig.NUM_STREAM_THREADS_CONFIG] = numThreads
+    }
 
     // load mapping.yml:
     val mappingRoot = this::class.java.classLoader.getResourceAsStream("mapping.yml").use {
