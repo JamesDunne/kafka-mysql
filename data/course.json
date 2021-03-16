@@ -1,0 +1,132 @@
+0:{"courseId": 0, "courseLevel": "Level_500", "taughtBy": [{"personId": 40}]}
+1:{"courseId": 1, "courseLevel": "Level_500", "taughtBy": [{"personId": 40}]}
+2:{"courseId": 2, "courseLevel": "Level_500", "taughtBy": [{"personId": 180}]}
+3:{"courseId": 3, "courseLevel": "Level_500", "taughtBy": [{"personId": 279}]}
+4:{"courseId": 4, "courseLevel": "Level_500", "taughtBy": [{"personId": 107}]}
+5:{"courseId": 5, "courseLevel": "Level_300", "taughtBy": [{"personId": null}]}
+7:{"courseId": 7, "courseLevel": "Level_500", "taughtBy": [{"personId": 415}]}
+8:{"courseId": 8, "courseLevel": "Level_400", "taughtBy": [{"personId": 297}]}
+9:{"courseId": 9, "courseLevel": "Level_500", "taughtBy": [{"personId": 235}]}
+11:{"courseId": 11, "courseLevel": "Level_300", "taughtBy": [{"personId": 52}, {"personId": 57}, {"personId": 298}, {"personId": 324}, {"personId": 331}]}
+12:{"courseId": 12, "courseLevel": "Level_500", "taughtBy": [{"personId": 79}, {"personId": 211}, {"personId": 407}]}
+13:{"courseId": 13, "courseLevel": "Level_500", "taughtBy": [{"personId": 72}, {"personId": 342}]}
+14:{"courseId": 14, "courseLevel": "Level_500", "taughtBy": [{"personId": 124}]}
+15:{"courseId": 15, "courseLevel": "Level_500", "taughtBy": [{"personId": 292}]}
+16:{"courseId": 16, "courseLevel": "Level_500", "taughtBy": [{"personId": 79}, {"personId": 240}]}
+18:{"courseId": 18, "courseLevel": "Level_300", "taughtBy": [{"personId": 107}, {"personId": 213}, {"personId": 290}, {"personId": 326}, {"personId": 373}, {"personId": 375}]}
+19:{"courseId": 19, "courseLevel": "Level_500", "taughtBy": [{"personId": 5}, {"personId": 370}]}
+20:{"courseId": 20, "courseLevel": "Level_400", "taughtBy": [{"personId": 180}]}
+21:{"courseId": 21, "courseLevel": "Level_400", "taughtBy": [{"personId": 22}, {"personId": 99}]}
+23:{"courseId": 23, "courseLevel": "Level_500", "taughtBy": [{"personId": 179}]}
+24:{"courseId": 24, "courseLevel": "Level_400", "taughtBy": [{"personId": 79}, {"personId": 150}, {"personId": 211}, {"personId": 240}, {"personId": 407}]}
+27:{"courseId": 27, "courseLevel": "Level_400", "taughtBy": [{"personId": 165}, {"personId": 331}]}
+28:{"courseId": 28, "courseLevel": "Level_400", "taughtBy": [{"personId": 394}]}
+29:{"courseId": 29, "courseLevel": "Level_500", "taughtBy": [{"personId": 298}]}
+30:{"courseId": 30, "courseLevel": "Level_400", "taughtBy": [{"personId": 290}]}
+32:{"courseId": 32, "courseLevel": "Level_500", "taughtBy": [{"personId": 319}]}
+34:{"courseId": 34, "courseLevel": "Level_500", "taughtBy": [{"personId": 179}]}
+35:{"courseId": 35, "courseLevel": "Level_500", "taughtBy": [{"personId": null}]}
+36:{"courseId": 36, "courseLevel": "Level_500", "taughtBy": [{"personId": 181}]}
+38:{"courseId": 38, "courseLevel": "Level_400", "taughtBy": [{"personId": 104}, {"personId": 124}, {"personId": 204}, {"personId": 255}]}
+39:{"courseId": 39, "courseLevel": "Level_500", "taughtBy": [{"personId": 415}]}
+40:{"courseId": 40, "courseLevel": "Level_500", "taughtBy": [{"personId": 165}, {"personId": 298}, {"personId": 378}]}
+41:{"courseId": 41, "courseLevel": "Level_400", "taughtBy": [{"personId": 351}]}
+44:{"courseId": 44, "courseLevel": "Level_400", "taughtBy": [{"personId": 171}, {"personId": 293}, {"personId": 415}]}
+45:{"courseId": 45, "courseLevel": "Level_400", "taughtBy": [{"personId": null}]}
+46:{"courseId": 46, "courseLevel": "Level_500", "taughtBy": [{"personId": 335}]}
+48:{"courseId": 48, "courseLevel": "Level_400", "taughtBy": [{"personId": 107}, {"personId": 213}, {"personId": 375}]}
+49:{"courseId": 49, "courseLevel": "Level_400", "taughtBy": [{"personId": 64}, {"personId": 189}, {"personId": 248}, {"personId": 263}]}
+50:{"courseId": 50, "courseLevel": "Level_500", "taughtBy": [{"personId": 171}]}
+51:{"courseId": 51, "courseLevel": "Level_400", "taughtBy": [{"personId": 5}, {"personId": 18}, {"personId": 166}]}
+52:{"courseId": 52, "courseLevel": "Level_400", "taughtBy": [{"personId": 168}]}
+53:{"courseId": 53, "courseLevel": "Level_400", "taughtBy": [{"personId": 189}, {"personId": 248}]}
+54:{"courseId": 54, "courseLevel": "Level_500", "taughtBy": [{"personId": null}]}
+56:{"courseId": 56, "courseLevel": "Level_500", "taughtBy": [{"personId": null}]}
+57:{"courseId": 57, "courseLevel": "Level_400", "taughtBy": [{"personId": 150}]}
+61:{"courseId": 61, "courseLevel": "Level_500", "taughtBy": [{"personId": 107}]}
+62:{"courseId": 62, "courseLevel": "Level_400", "taughtBy": [{"personId": 101}]}
+63:{"courseId": 63, "courseLevel": "Level_500", "taughtBy": [{"personId": 335}]}
+64:{"courseId": 64, "courseLevel": "Level_500", "taughtBy": [{"personId": 79}]}
+65:{"courseId": 65, "courseLevel": "Level_500", "taughtBy": [{"personId": null}]}
+66:{"courseId": 66, "courseLevel": "Level_500", "taughtBy": [{"personId": 165}, {"personId": 298}]}
+67:{"courseId": 67, "courseLevel": "Level_500", "taughtBy": [{"personId": 394}]}
+68:{"courseId": 68, "courseLevel": "Level_400", "taughtBy": [{"personId": 201}, {"personId": 324}, {"personId": 331}]}
+71:{"courseId": 71, "courseLevel": "Level_500", "taughtBy": [{"personId": 5}]}
+74:{"courseId": 74, "courseLevel": "Level_500", "taughtBy": [{"personId": 104}, {"personId": 124}]}
+75:{"courseId": 75, "courseLevel": "Level_400", "taughtBy": [{"personId": 267}]}
+76:{"courseId": 76, "courseLevel": "Level_500", "taughtBy": [{"personId": 319}]}
+77:{"courseId": 77, "courseLevel": "Level_500", "taughtBy": [{"personId": 52}, {"personId": 165}, {"personId": 324}]}
+79:{"courseId": 79, "courseLevel": "Level_500", "taughtBy": [{"personId": 72}]}
+80:{"courseId": 80, "courseLevel": "Level_400", "taughtBy": [{"personId": 98}, {"personId": 101}, {"personId": 180}]}
+82:{"courseId": 82, "courseLevel": "Level_400", "taughtBy": [{"personId": 407}]}
+83:{"courseId": 83, "courseLevel": "Level_500", "taughtBy": [{"personId": null}]}
+84:{"courseId": 84, "courseLevel": "Level_500", "taughtBy": [{"personId": 324}]}
+85:{"courseId": 85, "courseLevel": "Level_500", "taughtBy": [{"personId": null}]}
+86:{"courseId": 86, "courseLevel": "Level_500", "taughtBy": [{"personId": null}]}
+87:{"courseId": 87, "courseLevel": "Level_500", "taughtBy": [{"personId": null}]}
+88:{"courseId": 88, "courseLevel": "Level_500", "taughtBy": [{"personId": 235}]}
+89:{"courseId": 89, "courseLevel": "Level_400", "taughtBy": [{"personId": 394}]}
+91:{"courseId": 91, "courseLevel": "Level_500", "taughtBy": [{"personId": 331}]}
+93:{"courseId": 93, "courseLevel": "Level_400", "taughtBy": [{"personId": 351}]}
+97:{"courseId": 97, "courseLevel": "Level_400", "taughtBy": [{"personId": 324}]}
+98:{"courseId": 98, "courseLevel": "Level_500", "taughtBy": [{"personId": 103}]}
+101:{"courseId": 101, "courseLevel": "Level_500", "taughtBy": [{"personId": 279}, {"personId": 394}]}
+103:{"courseId": 103, "courseLevel": "Level_500", "taughtBy": [{"personId": 201}]}
+104:{"courseId": 104, "courseLevel": "Level_300", "taughtBy": [{"personId": 165}, {"personId": 181}, {"personId": 364}]}
+107:{"courseId": 107, "courseLevel": "Level_400", "taughtBy": [{"personId": null}]}
+108:{"courseId": 108, "courseLevel": "Level_500", "taughtBy": [{"personId": 279}]}
+109:{"courseId": 109, "courseLevel": "Level_500", "taughtBy": [{"personId": null}]}
+110:{"courseId": 110, "courseLevel": "Level_400", "taughtBy": [{"personId": 351}]}
+114:{"courseId": 114, "courseLevel": "Level_500", "taughtBy": [{"personId": null}]}
+115:{"courseId": 115, "courseLevel": "Level_500", "taughtBy": [{"personId": 72}, {"personId": 342}]}
+116:{"courseId": 116, "courseLevel": "Level_500", "taughtBy": [{"personId": 375}]}
+117:{"courseId": 117, "courseLevel": "Level_500", "taughtBy": [{"personId": 181}]}
+118:{"courseId": 118, "courseLevel": "Level_400", "taughtBy": [{"personId": 351}]}
+119:{"courseId": 119, "courseLevel": "Level_500", "taughtBy": [{"personId": 324}]}
+120:{"courseId": 120, "courseLevel": "Level_500", "taughtBy": [{"personId": 82}, {"personId": 235}]}
+121:{"courseId": 121, "courseLevel": "Level_500", "taughtBy": [{"personId": 52}]}
+122:{"courseId": 122, "courseLevel": "Level_400", "taughtBy": [{"personId": 378}]}
+123:{"courseId": 123, "courseLevel": "Level_500", "taughtBy": [{"personId": 150}]}
+124:{"courseId": 124, "courseLevel": "Level_300", "taughtBy": [{"personId": 9}, {"personId": 46}, {"personId": 335}]}
+125:{"courseId": 125, "courseLevel": "Level_400", "taughtBy": [{"personId": 351}]}
+126:{"courseId": 126, "courseLevel": "Level_400", "taughtBy": [{"personId": 165}]}
+128:{"courseId": 128, "courseLevel": "Level_400", "taughtBy": [{"personId": 150}]}
+129:{"courseId": 129, "courseLevel": "Level_500", "taughtBy": [{"personId": 213}, {"personId": 373}]}
+131:{"courseId": 131, "courseLevel": "Level_500", "taughtBy": [{"personId": null}]}
+132:{"courseId": 132, "courseLevel": "Level_500", "taughtBy": [{"personId": 319}]}
+134:{"courseId": 134, "courseLevel": "Level_500", "taughtBy": [{"personId": 240}]}
+135:{"courseId": 135, "courseLevel": "Level_500", "taughtBy": [{"personId": null}]}
+136:{"courseId": 136, "courseLevel": "Level_500", "taughtBy": [{"personId": 394}]}
+137:{"courseId": 137, "courseLevel": "Level_400", "taughtBy": [{"personId": 165}]}
+138:{"courseId": 138, "courseLevel": "Level_500", "taughtBy": [{"personId": 335}]}
+139:{"courseId": 139, "courseLevel": "Level_500", "taughtBy": [{"personId": 235}]}
+141:{"courseId": 141, "courseLevel": "Level_500", "taughtBy": [{"personId": 150}]}
+143:{"courseId": 143, "courseLevel": "Level_400", "taughtBy": [{"personId": 211}, {"personId": 407}]}
+144:{"courseId": 144, "courseLevel": "Level_500", "taughtBy": [{"personId": 278}, {"personId": 331}]}
+146:{"courseId": 146, "courseLevel": "Level_300", "taughtBy": [{"personId": 335}]}
+147:{"courseId": 147, "courseLevel": "Level_300", "taughtBy": [{"personId": 52}, {"personId": 57}, {"personId": 165}, {"personId": 201}, {"personId": 324}, {"personId": 331}, {"personId": 364}]}
+148:{"courseId": 148, "courseLevel": "Level_400", "taughtBy": [{"personId": 351}]}
+149:{"courseId": 149, "courseLevel": "Level_500", "taughtBy": [{"personId": 331}]}
+150:{"courseId": 150, "courseLevel": "Level_500", "taughtBy": [{"personId": 351}]}
+151:{"courseId": 151, "courseLevel": "Level_400", "taughtBy": [{"personId": 82}, {"personId": 179}, {"personId": 234}, {"personId": 235}, {"personId": 267}, {"personId": 290}]}
+152:{"courseId": 152, "courseLevel": "Level_500", "taughtBy": [{"personId": null}]}
+153:{"courseId": 153, "courseLevel": "Level_500", "taughtBy": [{"personId": 342}, {"personId": 394}]}
+154:{"courseId": 154, "courseLevel": "Level_400", "taughtBy": [{"personId": null}]}
+155:{"courseId": 155, "courseLevel": "Level_500", "taughtBy": [{"personId": null}]}
+156:{"courseId": 156, "courseLevel": "Level_500", "taughtBy": [{"personId": 240}]}
+157:{"courseId": 157, "courseLevel": "Level_400", "taughtBy": [{"personId": 72}, {"personId": 342}, {"personId": 394}]}
+158:{"courseId": 158, "courseLevel": "Level_500", "taughtBy": [{"personId": 240}]}
+159:{"courseId": 159, "courseLevel": "Level_400", "taughtBy": [{"personId": 394}]}
+160:{"courseId": 160, "courseLevel": "Level_500", "taughtBy": [{"personId": 331}]}
+161:{"courseId": 161, "courseLevel": "Level_400", "taughtBy": [{"personId": 201}, {"personId": 298}, {"personId": 331}]}
+162:{"courseId": 162, "courseLevel": "Level_500", "taughtBy": [{"personId": 213}]}
+164:{"courseId": 164, "courseLevel": "Level_400", "taughtBy": [{"personId": 351}]}
+165:{"courseId": 165, "courseLevel": "Level_300", "taughtBy": [{"personId": 75}, {"personId": 141}, {"personId": 181}, {"personId": 231}, {"personId": 364}]}
+166:{"courseId": 166, "courseLevel": "Level_500", "taughtBy": [{"personId": 235}]}
+167:{"courseId": 167, "courseLevel": "Level_500", "taughtBy": [{"personId": 98}]}
+168:{"courseId": 168, "courseLevel": "Level_500", "taughtBy": [{"personId": 240}]}
+169:{"courseId": 169, "courseLevel": "Level_500", "taughtBy": [{"personId": null}]}
+170:{"courseId": 170, "courseLevel": "Level_500", "taughtBy": [{"personId": 79}, {"personId": 211}, {"personId": 407}]}
+172:{"courseId": 172, "courseLevel": "Level_500", "taughtBy": [{"personId": 46}, {"personId": 335}]}
+173:{"courseId": 173, "courseLevel": "Level_500", "taughtBy": [{"personId": 171}]}
+174:{"courseId": 174, "courseLevel": "Level_400", "taughtBy": [{"personId": 267}]}
