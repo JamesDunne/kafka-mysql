@@ -9,6 +9,7 @@ import org.apache.kafka.streams.processor.ProcessorContext
 import java.sql.Connection
 import java.sql.PreparedStatement
 import java.sql.SQLException
+import java.sql.SQLSyntaxErrorException
 import java.time.Instant
 import javax.sql.DataSource
 
@@ -77,7 +78,12 @@ class TablePopulator(
     }
     sql.append(")")
 
-    conn.createStatement().execute(sql.toString())
+    val sqlText = sql.toString()
+    try {
+      conn.createStatement().execute(sqlText)
+    } catch (ex: SQLSyntaxErrorException) {
+      throw RuntimeException("SQL syntax error in query:\n$sqlText", ex)
+    }
   }
 
   override fun init(context: ProcessorContext?) {
@@ -306,7 +312,8 @@ class TablePopulator(
         })")
       }
 
-      conn.prepareStatement(delSql.toString()).use {
+      val sqlText = delSql.toString()
+      conn.prepareStatement(sqlText).use {
         var n = 1
         for (col in primaryKeyColumns ?: emptyList()) {
           col.value.paramSetterForColumn(
@@ -329,7 +336,11 @@ class TablePopulator(
           n++
         }
 
-        it.executeUpdate()
+        try {
+          it.executeUpdate()
+        } catch (ex: SQLSyntaxErrorException) {
+          throw RuntimeException("SQL syntax error in query:\n$sqlText", ex)
+        }
       }
 
       conn.commit()
