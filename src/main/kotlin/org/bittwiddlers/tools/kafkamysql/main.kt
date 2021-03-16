@@ -85,7 +85,13 @@ class Main {
         }
 
         for (table in event.tables ?: emptyMap()) {
-          // create and populate the table:
+          // create the table once up front:
+          TablePopulator(ds, json, table).use {
+            it.conn = ds.connection
+            it.createTable()
+          }
+
+          // populate the table:
           streamFiltered.process(
             { TablePopulator(ds, json, table) },
             Named.`as`("${table.key}")

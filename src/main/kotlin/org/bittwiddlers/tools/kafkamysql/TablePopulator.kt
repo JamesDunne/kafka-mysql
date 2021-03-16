@@ -17,7 +17,7 @@ class TablePopulator(
   val ds: DataSource,
   val json: ObjectMapper,
   val table: Map.Entry<String, Table>
-) : Processor<String, JsonObject> {
+) : Processor<String, JsonObject>, AutoCloseable {
   private var now: Instant = Instant.now()
   var colCount: Int = 0
 
@@ -176,8 +176,6 @@ class TablePopulator(
     sql.append(") on duplicate key update ")
     sql.append(colsUpdExpr.joinToString(","))
     stmtInsert = conn.prepareStatement(sql.toString())
-
-    createTable()
   }
 
   override fun process(k: String?, jsonRoot: JsonObject?) {
