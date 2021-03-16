@@ -167,6 +167,13 @@ class Entity {
   @JsonIgnore
   var fromPath: JsonPath? = null
 
+  // json path to filter entities
+  var filter: String? = null
+
+  // compiled json path for filtering:
+  @JsonIgnore
+  var filterPath: JsonPath? = null
+
   // properties to pull out of the non-dated entity root:
   var nondated: LinkedHashMap<String, Column>? = null
 

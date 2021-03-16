@@ -98,6 +98,9 @@ class TablePopulator(
     val entities = table.value.entities
     if (flatMapped != null) {
       flatMapped.fromPath = JsonPath.compile(flatMapped.from)
+      if (flatMapped.filter != null) {
+        flatMapped.filterPath = JsonPath.compile(flatMapped.filter)
+      }
 
       for (col in flatMapped.nondated ?: emptyMap()) {
         col.value.fromPath = JsonPath.compile(col.value.from)
@@ -134,6 +137,10 @@ class TablePopulator(
     } else if (entities != null) {
       for (entity in entities) {
         entity.value.fromPath = JsonPath.compile(entity.value.from)
+
+        if (entity.value.filter != null) {
+          entity.value.filterPath = JsonPath.compile(entity.value.filter)
+        }
 
         for (col in entity.value.nondated ?: emptyMap()) {
           col.value.fromPath = JsonPath.compile(col.value.from)
@@ -203,6 +210,11 @@ class TablePopulator(
           else -> t[0]
         }
 
+        // filter entity:
+        if (entity.value.filterPath?.read<List<Any?>>(entityObj)?.isEmpty() == true) {
+          continue
+        }
+
         n = addColValuesAsParams(
           stmtInsert,
           n,
@@ -245,13 +257,18 @@ class TablePopulator(
   }
 
   private fun processFlatMapped(flatMapped: Entity, jsonRoot: JsonObject?) {
-    val entityObjects = flatMapped.fromPath!!.read<List<Any?>>(jsonRoot)
+    val entityObjectsAll = flatMapped.fromPath!!.read<List<Any?>>(jsonRoot)
+
+    // filter entities:
+    val filterPath = flatMapped.filterPath
+    val entityObjects = filterPath?.read<List<Any?>>(entityObjectsAll) ?: entityObjectsAll
 
     // find how many alive entities there are:
-    val aliveEntityObjs = entityObjects.filter { entityObj ->
-      val datedMap = getDatedObject(entityObj) ?: return@filter true
-      return@filter isDatedAlive(datedMap, now)
-    }
+    val aliveEntityObjs = entityObjects
+      .filter { entityObj ->
+        val datedMap = getDatedObject(entityObj) ?: return@filter true
+        return@filter isDatedAlive(datedMap, now)
+      }
 
     // start a batch:
     stmtInsert.clearBatch()
