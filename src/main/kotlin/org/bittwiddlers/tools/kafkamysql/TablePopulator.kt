@@ -71,10 +71,10 @@ class TablePopulator(
       }
     }
 
-    for (col in cols) {
-      sql.append("  ${col},\n")
+    sql.append(cols.joinToString(",\n  "))
+    if (pkNames.isNotEmpty()) {
+      sql.append(",\n  primary key (${pkNames.joinToString(",")})\n")
     }
-    sql.append("  primary key (${pkNames.joinToString(",")})\n")
     sql.append(")")
 
     conn.createStatement().execute(sql.toString())
@@ -301,7 +301,7 @@ class TablePopulator(
         }"
       )
       if (aliveEntityObjs.isNotEmpty()) {
-        delSql.append("and `${entityIdCol.key}` not in (${
+        delSql.append(" and `${entityIdCol.key}` not in (${
           aliveEntityObjs.joinToString { entityIdCol.value.paramExpression() }
         })")
       }
