@@ -5,6 +5,8 @@ create user if not exists 'username'@'localhost' identified by 'password';
 
 grant all on courses.* to 'username'@'localhost';
 
+SET GLOBAL max_connections = 256;
+
 use courses;
 drop table if exists advisedBy;
 drop table if exists course;
