@@ -9,7 +9,9 @@ fun EnvVars.extractKafkaProperties(prefix: String, configDef: ConfigDef): Map<An
   val properties: MutableMap<Any, Any> = LinkedHashMap()
 
   // load any overrides onto consumer properties:
-  val stringOverrides: Map<Any, Any> = this.mapOnto(prefix, LinkedHashMap<Any, Any>())
+  val envProps: Map<Any, Any> = this.mapOnto(prefix, LinkedHashMap<Any, Any>())
+  // translate '_' to '.' in the keys:
+  val stringOverrides = envProps.mapKeys { (it.key as String).replace('_', '.') }
 
   // parse each string value to its target type:
   for (key in configDef.configKeys().values) {
