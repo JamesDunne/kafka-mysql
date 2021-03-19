@@ -1,9 +1,6 @@
 package org.bittwiddlers.tools.kafkamysql
 
 import com.fasterxml.jackson.databind.ObjectMapper
-import com.jayway.jsonpath.Configuration
-import com.jayway.jsonpath.JsonPath
-import com.jayway.jsonpath.Option
 import org.apache.kafka.streams.processor.Processor
 import org.apache.kafka.streams.processor.ProcessorContext
 import java.sql.Connection
@@ -11,25 +8,22 @@ import java.sql.PreparedStatement
 import java.sql.SQLException
 import java.sql.SQLSyntaxErrorException
 import java.time.Instant
+import javax.script.ScriptEngine
 import javax.sql.DataSource
 
 class TablePopulator(
   val ds: DataSource,
   val json: ObjectMapper,
+  val scriptEngine: ScriptEngine,
   val table: Map.Entry<String, Table>
-) : Processor<String, JsonObject>, AutoCloseable {
+) : Processor<String, JsonObjectGeneral>, AutoCloseable {
   private var now: Instant = Instant.now()
   var colCount: Int = 0
 
   lateinit var stmtInsert: PreparedStatement
-  var primaryKeyColumns: List<Map.Entry<String, Column>>? = null
-  private lateinit var entityIdCol: Map.Entry<String, Column>
-
-  val config: Configuration = Configuration.defaultConfiguration()
-    .setOptions(
-      Option.ALWAYS_RETURN_LIST,
-      Option.SUPPRESS_EXCEPTIONS
-    )
+  var primaryKeyColumns: List<Column>? = null
+  var deleteWhereNotInColumn: Column? = null
+  var deleteWhere: List<Column>? = null
 
   lateinit var conn: Connection
 
@@ -39,37 +33,28 @@ class TablePopulator(
 
     val cols = mutableListOf<String>()
     val pkNames = mutableListOf<String>()
-    val entities = table.value.entities
-    if (entities != null) {
-      for (entity in entities) {
-        for (col in entity.value.nondated ?: emptyMap()) {
-          if (col.value.primaryKey) {
-            pkNames.add("`${col.key}`")
-          }
-          cols.add("`${col.key}` ${typeToMysql(col.value.type!!)}")
-        }
-        for (col in entity.value.dated ?: emptyMap()) {
-          if (col.value.primaryKey) {
-            pkNames.add("`${col.key}`")
-          }
-          cols.add("`${col.key}` ${typeToMysql(col.value.type!!)}")
-        }
-      }
-    }
+
+    val mapped = table.value.mapped
     val flatMapped = table.value.flatMapped
-    if (flatMapped != null) {
-      for (col in flatMapped.nondated ?: emptyMap()) {
-        if (col.value.primaryKey) {
-          pkNames.add("`${col.key}`")
+
+    when {
+      mapped != null -> {
+        for (col in mapped.columns ?: emptyMap()) {
+          if (col.value.primaryKey) {
+            pkNames.add("`${col.key}`")
+          }
+          cols.add("`${col.key}` ${typeToMysql(col.value.type!!)}")
         }
-        cols.add("`${col.key}` ${typeToMysql(col.value.type!!)}")
       }
-      for (col in flatMapped.dated ?: emptyMap()) {
-        if (col.value.primaryKey) {
-          pkNames.add("`${col.key}`")
+      flatMapped != null -> {
+        for (col in flatMapped.columns ?: emptyMap()) {
+          if (col.value.primaryKey) {
+            pkNames.add("`${col.key}`")
+          }
+          cols.add("`${col.key}` ${typeToMysql(col.value.type!!)}")
         }
-        cols.add("`${col.key}` ${typeToMysql(col.value.type!!)}")
       }
+      else -> throw RuntimeException("Table mapping ${table.key} must have either `mapped` or `flatMapped` section defined")
     }
 
     sql.append(cols.joinToString(",\n  "))
@@ -91,82 +76,47 @@ class TablePopulator(
     val colsInsName = mutableListOf<String>()
     val colsInsValue = mutableListOf<String>()
     val colsUpdExpr = mutableListOf<String>()
-    val pkCols = mutableListOf<Map.Entry<String, Column>>()
+    val pkCols = mutableListOf<Column>()
 
     colCount = 0
+
+    val mapped = table.value.mapped
     val flatMapped = table.value.flatMapped
-    val entities = table.value.entities
+
     if (flatMapped != null) {
-      flatMapped.fromPath = JsonPath.compile(flatMapped.from)
-      if (flatMapped.filter != null) {
-        flatMapped.filterPath = JsonPath.compile(flatMapped.filter)
-      }
-
-      for (col in flatMapped.nondated ?: emptyMap()) {
-        col.value.fromPath = JsonPath.compile(col.value.from)
-
+      val columns = flatMapped.columns ?: emptyMap()
+      for (col in columns) {
         colsInsName.add("`${col.key}`")
         val param = col.value.paramExpression()
         colsInsValue.add(param)
         val checkParam = "`${col.key}`=${param}"
         colsUpdExpr.add(checkParam)
         // track primaryKey columns for delete statement:
-        if (col.value.entityId) {
-          entityIdCol = col
-        } else if (col.value.primaryKey) {
-          pkCols.add(col)
+        if (col.value.primaryKey) {
+          pkCols.add(col.value)
         }
 
         colCount++
       }
-      for (col in flatMapped.dated ?: emptyMap()) {
-        col.value.fromPath = JsonPath.compile(col.value.from)
 
+      val delete = flatMapped.delete
+      if (delete != null) {
+        val where = delete.where ?: throw RuntimeException("delete.where must be a set of column names")
+        deleteWhere = where.map { columns[it] ?: throw RuntimeException("delete.where must be a set of column names; $it is missing") }
+
+        val whereNotIn = delete.whereNotIn ?: throw RuntimeException("delete.whereNotIn must be a valid column name")
+        val col = columns[whereNotIn] ?: throw RuntimeException("delete.whereNotIn must be a valid column name")
+        deleteWhereNotInColumn = col
+      }
+    } else if (mapped != null) {
+      for (col in mapped.columns ?: emptyMap()) {
         colsInsName.add("`${col.key}`")
         val param = col.value.paramExpression()
         colsInsValue.add(param)
         val checkParam = "`${col.key}`=${param}"
         colsUpdExpr.add(checkParam)
-        // primaryKeys cannot be dated properties:
-        if (col.value.primaryKey) {
-          throw RuntimeException("primaryKey cannot be set on dated properties")
-        }
 
         colCount++
-      }
-    } else if (entities != null) {
-      for (entity in entities) {
-        entity.value.fromPath = JsonPath.compile(entity.value.from)
-
-        if (entity.value.filter != null) {
-          entity.value.filterPath = JsonPath.compile(entity.value.filter)
-        }
-
-        for (col in entity.value.nondated ?: emptyMap()) {
-          col.value.fromPath = JsonPath.compile(col.value.from)
-
-          colsInsName.add("`${col.key}`")
-          val param = col.value.paramExpression()
-          colsInsValue.add(param)
-          val checkParam = "`${col.key}`=${param}"
-          colsUpdExpr.add(checkParam)
-
-          colCount++
-        }
-        for (col in entity.value.dated ?: emptyMap()) {
-          col.value.fromPath = JsonPath.compile(col.value.from)
-
-          colsInsName.add("`${col.key}`")
-          val param = col.value.paramExpression()
-          colsInsValue.add(param)
-          val checkParam = "`${col.key}`=${param}"
-          colsUpdExpr.add(checkParam)
-          if (col.value.primaryKey) {
-            throw RuntimeException("primaryKey cannot be set on dated properties")
-          }
-
-          colCount++
-        }
       }
     }
 
@@ -185,68 +135,29 @@ class TablePopulator(
     stmtInsert = conn.prepareStatement(sql.toString())
   }
 
-  override fun process(k: String?, jsonRoot: JsonObject?) {
+  override fun process(key: String, jsonRoot: JsonObjectGeneral) {
     val flatMapped = table.value.flatMapped
-    val entities = table.value.entities
+    val mapped = table.value.mapped
     if (flatMapped != null) {
       processFlatMapped(flatMapped, jsonRoot)
-    } else if (entities != null) {
-      processEntities(entities, jsonRoot)
+    } else if (mapped != null) {
+      processMapped(mapped, jsonRoot)
     }
   }
 
-  private fun processEntities(
-    entities: LinkedHashMap<String, Entity>,
-    jsonRoot: JsonObject?
-  ) {
+  private fun processMapped(mapped: MappedTable, jsonRoot: JsonObjectGeneral) {
     try {
       var n = 1
       stmtInsert.clearParameters()
-      for (entity in entities) {
-        val t = entity.value.fromPath!!.read<List<Any?>>(jsonRoot, config)
-        val entityObj = when {
-          t.size > 1 -> throw RuntimeException("table ${table.key} entity ${entity.key} cannot select multiple JSON objects!")
-          t.isEmpty() -> null
-          else -> t[0]
-        }
 
-        // filter entity:
-        if (entity.value.filterPath?.read<List<Any?>>(entityObj)?.isEmpty() == true) {
-          continue
-        }
-
-        n = addColValuesAsParams(
-          stmtInsert,
-          n,
-          colCount,
-          entity.value.nondated ?: emptyMap(),
-          jsonRoot,
-          entityObj,
-          config
-        )
-
-        val datedMap = getDatedObject(entityObj)
-        val entryObj = when {
-          datedMap != null -> when {
-            // null out this entity if it's deleted:
-            !isDatedAlive(datedMap, now) -> null
-            // find the applicable dated entry first:
-            else -> findDatedEntry(datedMap, now)
-          }
-          // fill with NULL values:
-          else -> null
-        }
-
-        n = addColValuesAsParams(
-          stmtInsert,
-          n,
-          colCount,
-          entity.value.dated ?: emptyMap(),
-          jsonRoot,
-          entryObj,
-          config
-        )
-      }
+      addColValuesAsParams(
+        stmtInsert,
+        n,
+        colCount,
+        mapped.columns ?: emptyMap(),
+        jsonRoot,
+        jsonRoot
+      )
 
       stmtInsert.executeUpdate()
       conn.commit()
@@ -256,53 +167,23 @@ class TablePopulator(
     }
   }
 
-  private fun processFlatMapped(flatMapped: Entity, jsonRoot: JsonObject?) {
-    val entityObjectsAll = flatMapped.fromPath!!.read<List<Any?>>(jsonRoot)
-
-    // filter entities:
-    val filterPath = flatMapped.filterPath
-    val entityObjects = filterPath?.read<List<Any?>>(entityObjectsAll) ?: entityObjectsAll
-
-    // find how many alive entities there are:
-    val aliveEntityObjs = entityObjects
-      .filter { entityObj ->
-        val datedMap = getDatedObject(entityObj) ?: return@filter true
-        return@filter isDatedAlive(datedMap, now)
-      }
+  private fun processFlatMapped(flatMapped: FlatMappedTable, jsonRoot: JsonObjectGeneral) {
+    val entityObjects = flatMapped.fromSelector?.apply(jsonRoot) ?: throw RuntimeException("missing `from` flatMap function")
 
     // start a batch:
     stmtInsert.clearBatch()
 
-    loop@ for (entityObj in aliveEntityObjs) {
+    loop@ for (entityObj in entityObjects) {
       stmtInsert.clearParameters()
-
-      val datedMap = getDatedObject(entityObj)
-      val entryObj = when {
-        // find the applicable dated entry first:
-        datedMap != null -> findDatedEntry(datedMap, now)
-        // fill with NULL values:
-        else -> null
-      }
 
       var n = 1
       n = addColValuesAsParams(
         stmtInsert,
         n,
         colCount,
-        flatMapped.nondated ?: emptyMap(),
+        flatMapped.columns ?: emptyMap(),
         jsonRoot,
-        entityObj,
-        config
-      )
-
-      n = addColValuesAsParams(
-        stmtInsert,
-        n,
-        colCount,
-        flatMapped.dated ?: emptyMap(),
-        jsonRoot,
-        entryObj,
-        config
+        entityObj
       )
 
       stmtInsert.addBatch()
@@ -312,49 +193,48 @@ class TablePopulator(
       // execute the UPSERT batch:
       stmtInsert.executeBatch()
 
-      // delete entities not in the alive list:
-      val delSql = StringBuilder()
-      delSql.append(
-        "delete from `${table.key}` where ${
-          primaryKeyColumns?.joinToString(
-            " and ",
-            transform = { it.value.nameEqualsParamExpression(it.key) })
-        }"
-      )
-      if (aliveEntityObjs.isNotEmpty()) {
-        delSql.append(" and `${entityIdCol.key}` not in (${
-          aliveEntityObjs.joinToString { entityIdCol.value.paramExpression() }
-        })")
-      }
+      val delWhere = deleteWhere
+      if (delWhere != null) {
+        val delCol = deleteWhereNotInColumn ?: throw RuntimeException("flatMapped.delete must have whereNotIn defined")
 
-      val sqlText = delSql.toString()
-      conn.prepareStatement(sqlText).use {
-        var n = 1
-        for (col in primaryKeyColumns ?: emptyList()) {
-          col.value.paramSetterForColumn(
-            it,
-            jsonRoot,
-            jsonRoot,
-            config,
-            json
-          )(n)
-          n++
-        }
-        for (entityObj in aliveEntityObjs) {
-          entityIdCol.value.paramSetterForColumn(
-            it,
-            jsonRoot,
-            entityObj,
-            config,
-            json
-          )(n)
-          n++
+        // delete entities not in the alive list:
+        val whereClauseExprs = mutableListOf<String>()
+        whereClauseExprs.addAll(delWhere.map(Column::nameEqualsParamExpression) ?: emptyList())
+        if (entityObjects.isNotEmpty()) {
+          whereClauseExprs.add("`${delCol.columnName}` not in (${
+            entityObjects.joinToString { delCol.paramExpression() }
+          })")
         }
 
-        try {
-          it.executeUpdate()
-        } catch (ex: SQLSyntaxErrorException) {
-          throw RuntimeException("SQL syntax error in query:\n$sqlText", ex)
+        val delSql = "delete from `${table.key}` where ${whereClauseExprs.joinToString(" and ")}"
+        conn.prepareStatement(delSql).use {
+          // set the parameters for the where clause:
+          var n = 1
+          for (col in delWhere) {
+            col.paramSetterForColumn(
+              it,
+              jsonRoot,
+              jsonRoot,
+              json
+            )(n)
+            n++
+          }
+          for (entityObj in entityObjects) {
+            delCol.paramSetterForColumn(
+              it,
+              jsonRoot,
+              entityObj,
+              json
+            )(n)
+            n++
+          }
+
+          // execute the delete:
+          try {
+            it.executeUpdate()
+          } catch (ex: SQLSyntaxErrorException) {
+            throw RuntimeException("SQL syntax error in query:\n$delSql", ex)
+          }
         }
       }
 
@@ -369,53 +249,13 @@ class TablePopulator(
     conn.close()
   }
 
-  private fun getDatedObject(entityObj: Any?): LinkedHashMap<String, Any?>? {
-    if (entityObj == null) return null
-
-    val entityMap = (entityObj as LinkedHashMap<String, Any?>?) ?: return null
-
-    val datedObj = entityMap["dated"]
-    val datedMap = (datedObj as LinkedHashMap<String, Any?>?) ?: return null
-
-    return datedMap
-  }
-
-  private fun isDatedAlive(
-    datedMap: LinkedHashMap<String, Any?>,
-    now: Instant
-  ): Boolean {
-    val createdOnStr = datedMap["createdOn"] as String?
-    val createdOn = createdOnStr?.let { Instant.parse(it) } ?: return false
-    if (now.isBefore(createdOn)) return false
-
-    val deletedOnStr = datedMap["deletedOn"] as String?
-    val deletedOn = deletedOnStr?.let { Instant.parse(it) } ?: return true
-    if (now.isAfter(deletedOn)) return false
-
-    return true
-  }
-
-  private fun findDatedEntry(
-    datedMap: LinkedHashMap<String, Any?>,
-    now: Instant
-  ): Any? {
-    val entries = datedMap["entries"]
-    val entriesList = (entries as List<LinkedHashMap<String, Any?>>?) ?: return null
-
-    return entriesList.lastOrNull {
-      val effDate = Instant.parse(it["effectiveDate"] as String)
-      now == effDate || effDate.isBefore(now)
-    }
-  }
-
   private fun addColValuesAsParams(
     stmt: PreparedStatement,
     i: Int,
     colCount: Int,
     cols: Map<String, Column>,
-    jsonRoot: Any?,
-    jsonObject: Any?,
-    config: Configuration
+    jsonRoot: JsonObjectGeneral?,
+    jsonObject: JsonObjectGeneral?
   ): Int {
     var n = i
     for (col in cols) {
@@ -423,7 +263,6 @@ class TablePopulator(
         stmt,
         jsonRoot,
         jsonObject,
-        config,
         json
       )
       setter(n)

@@ -3,9 +3,6 @@ package org.bittwiddlers.tools.kafkamysql
 import com.fasterxml.jackson.core.type.TypeReference
 import com.fasterxml.jackson.databind.ObjectMapper
 import com.fasterxml.jackson.dataformat.yaml.YAMLFactory
-import com.jayway.jsonpath.Configuration
-import com.jayway.jsonpath.JsonPath
-import com.jayway.jsonpath.Option
 import com.zaxxer.hikari.HikariConfig
 import com.zaxxer.hikari.HikariDataSource
 import org.apache.kafka.common.serialization.Serdes
@@ -13,14 +10,19 @@ import org.apache.kafka.streams.KafkaStreams
 import org.apache.kafka.streams.StreamsBuilder
 import org.apache.kafka.streams.StreamsConfig
 import org.apache.kafka.streams.kstream.Consumed
+import org.apache.kafka.streams.kstream.KStream
 import org.apache.kafka.streams.kstream.Named
 import org.bittwiddlers.env.EnvVars
 import org.bittwiddlers.kafka.JacksonSerde
 import org.bittwiddlers.kafka.extractKafkaProperties
+import java.nio.file.FileSystems
+import java.nio.file.Files
 import java.util.Properties
 import java.util.concurrent.CountDownLatch
+import javax.script.ScriptEngineManager
 
-typealias JsonObject = LinkedHashMap<String, Any>
+typealias JsonObject = LinkedHashMap<String, Any?>
+typealias JsonObjectGeneral = Map<String, Any?>
 
 fun main(args: Array<String>) = Main().run(args)
 
@@ -37,6 +39,9 @@ class Main {
     env.extractFilesFromEnv()
     env.extractJavaProperties()
 
+    val mappingPathStr = env.stringOrFail("MAPPING_PATH")
+    val mappingPath = FileSystems.getDefault().getPath(mappingPathStr).toAbsolutePath()
+
     // configure kafka streams:
     val props = Properties()
     props.putAll(
@@ -51,12 +56,12 @@ class Main {
     }
 
     // load mapping.yml:
-    val mappingRoot = this::class.java.classLoader.getResourceAsStream("mapping.yml").use {
+    val mappingRoot = Files.newInputStream(mappingPath).use {
       yaml.readValue(it, MappingRoot::class.java)
     }
 
     val tableCount = mappingRoot.topics?.values?.sumOf { topic ->
-      topic.events?.sumOf { event ->
+      topic.mappings?.sumOf { event ->
         event.tables?.size ?: 0
       } ?: 0
     } ?: 1
@@ -75,29 +80,43 @@ class Main {
     // create connection pool:
     val ds = HikariDataSource(HikariConfig(dsProps))
 
+    // instantiate Groovy script engine:
+    val scriptEngineManager = ScriptEngineManager(this::class.java.classLoader)
+    val scriptEngine = scriptEngineManager.getEngineByName("groovy")!!
+
+    // evaluate main groovy file:
+    mappingRoot.configure(mappingPath.parent, scriptEngine)
+
     // build topology:
     val builder = StreamsBuilder()
-
-    val config = Configuration.defaultConfiguration().setOptions(Option.SUPPRESS_EXCEPTIONS, Option.ALWAYS_RETURN_LIST)
-
     for (topic in mappingRoot.topics ?: emptyMap()) {
-      val stream = builder.stream(topic.key, Consumed.with(keySerde, valueSerde))
-      for (event in topic.value.events ?: emptyList()) {
-        val filterPath = JsonPath.compile(event.filter)
-        val streamFiltered = stream.filter { _, v ->
-          JsonPath.parse(v, config).read<List<Any?>>(filterPath)?.size == 1
-        }
+      val streamExact: KStream<String, LinkedHashMap<String, Any?>> = builder.stream(topic.key, Consumed.with(keySerde, valueSerde))
+      // downcast value type from LinkedHashMap<> to generic Map<>:
+      val stream = streamExact as KStream<String, JsonObjectGeneral>
 
-        for (table in event.tables ?: emptyMap()) {
+      for (tableMapping in topic.value.mappings ?: emptyList()) {
+        tableMapping.configure(scriptEngine)
+
+        // run filter and mapValues functions over this stream first at the message level:
+        val processedStream = tableMapping.preprocess?.fold(stream) { str, step ->
+          step.filterPredicate?.let { str.filter(it) }
+            ?: step.mapFunction?.let { str.mapValues(it) }
+            ?: str
+        } ?: stream
+
+        // TODO: create a MySQL transaction at the message level here?
+        // now process each table independently:
+        for (table in tableMapping.tables ?: emptyMap()) {
           // create the table once up front:
-          TablePopulator(ds, json, table).use {
+          TablePopulator(ds, json, scriptEngine, table).use {
             it.conn = ds.connection
             it.createTable()
           }
 
           // populate the table:
-          streamFiltered.process(
-            { TablePopulator(ds, json, table) },
+          processedStream.process(
+            // each stream thread instantiates its own TablePopulator instance so they can run in parallel:
+            { TablePopulator(ds, json, scriptEngine, table) },
             Named.`as`("${table.key}")
           )
         }
