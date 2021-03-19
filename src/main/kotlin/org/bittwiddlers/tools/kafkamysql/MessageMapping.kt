@@ -4,7 +4,6 @@ import com.fasterxml.jackson.annotation.JsonIgnore
 import com.fasterxml.jackson.databind.ObjectMapper
 import org.apache.kafka.streams.kstream.Predicate
 import org.apache.kafka.streams.kstream.ValueMapperWithKey
-import org.codehaus.groovy.jsr223.GroovyScriptEngineImpl
 import java.io.InputStreamReader
 import java.math.BigDecimal
 import java.nio.file.Files
@@ -36,19 +35,44 @@ class MessageMapping {
   var preprocess: List<PreprocessStep>? = null
   var tables: LinkedHashMap<String, Table>? = null
 
-  fun configure(scriptEngine: ScriptEngine) {
-    for (step in preprocess ?: emptyList()) {
-      step.filterPredicate = step.filter?.let { name ->
-        (scriptEngine as GroovyScriptEngineImpl).classLoader.loadClass(name) as Class<Predicate<String, JsonObjectGeneral>>
+  @Suppress("UNCHECKED_CAST")
+  fun configure(topicName: String, mappingIndex: Int, scriptEngine: ScriptEngine) {
+    for ((i, step) in (preprocess ?: emptyList()).withIndex()) {
+      // filter:
+      step.filterPredicate = step.filter?.let { code ->
+        val clazz = scriptEngine.eval(
+          """
+import org.apache.kafka.streams.*
+import org.apache.kafka.streams.kstream.*
+class Filter_${topicName}_${mappingIndex}_${i} implements Predicate<String, Map<String, Object>> {
+  @Override
+  boolean test(String k, Map<String, Object> v) {
+    /**/ $code /**/
+  }
+}"""
+        )
+        clazz as Class<Predicate<String, JsonObjectGeneral>>
       }?.newInstance()
-      step.mapFunction = step.map?.let { name ->
-        (scriptEngine as GroovyScriptEngineImpl).classLoader.loadClass(name) as Class<ValueMapperWithKey<String, JsonObjectGeneral, JsonObjectGeneral>>
+
+      // map:
+      step.mapFunction = step.map?.let { code ->
+        val clazz = scriptEngine.eval(
+          """
+import org.apache.kafka.streams.*
+import org.apache.kafka.streams.kstream.*
+class Map_${topicName}_${mappingIndex}_${i} implements ValueMapperWithKey<String, Map<String, Object>, Map<String, Object>> {
+  @Override
+  Map<String, Object> apply(String k, Map<String, Object> v) {
+    /**/ $code /**/
+  }
+}"""
+        )
+        clazz as Class<ValueMapperWithKey<String, JsonObjectGeneral, JsonObjectGeneral>>
       }?.newInstance()
     }
 
     for (table in tables ?: emptyMap()) {
-      table.value.flatMapped?.configure(table.key, scriptEngine)
-      table.value.mapped?.configure(table.key, scriptEngine)
+      table.value.configure(table.key, scriptEngine)
     }
   }
 }
@@ -66,6 +90,15 @@ class PreprocessStep {
 class Table {
   var mapped: MappedTable? = null
   var flatMapped: FlatMappedTable? = null
+
+  @JsonIgnore
+  lateinit var tableName: String
+
+  fun configure(tableName: String, scriptEngine: ScriptEngine) {
+    this.tableName = tableName
+    flatMapped?.configure(tableName, scriptEngine)
+    mapped?.configure(tableName, scriptEngine)
+  }
 }
 
 class MappedTable {
@@ -97,6 +130,7 @@ class FlatMappedTable {
   @JsonIgnore
   lateinit var tableName: String
 
+  @Suppress("UNCHECKED_CAST")
   fun configure(tableName: String, scriptEngine: ScriptEngine) {
     this.tableName = tableName
 
@@ -150,9 +184,11 @@ class Column {
 
   @JsonIgnore
   lateinit var tableName: String
+
   @JsonIgnore
   lateinit var columnName: String
 
+  @Suppress("UNCHECKED_CAST")
   fun configure(tableName: String, columnName: String, scriptEngine: ScriptEngine) {
     this.tableName = tableName
     this.columnName = columnName
@@ -220,7 +256,7 @@ class Select${columnName}From${tableName} implements java.util.function.Function
           type.startsWith("char", true) -> return { n: Int -> stmt.setString(n, v) }
           type.startsWith("nvarchar", true) -> return { n: Int -> stmt.setNString(n, v) }
           type.startsWith("nchar", true) -> return { n: Int -> stmt.setNString(n, v) }
-          else -> throw RuntimeException("unhandled data type ${v?.javaClass?.name} : $type")
+          else -> throw RuntimeException("unhandled data type ${v.javaClass.name} : $type")
         }
         is Boolean -> return { n: Int -> stmt.setBoolean(n, v) }
         is Int -> return { n: Int -> stmt.setInt(n, v) }
@@ -229,7 +265,7 @@ class Select${columnName}From${tableName} implements java.util.function.Function
         is Double -> return { n: Int -> stmt.setDouble(n, v) }
         is Float -> return { n: Int -> stmt.setFloat(n, v) }
         is ByteArray -> return { n: Int -> stmt.setBytes(n, v) }
-        else -> throw RuntimeException("unhandled data type ${v?.javaClass?.name} : $type")
+        else -> throw RuntimeException("unhandled data type ${v.javaClass.name} : $type")
       }
     }
   }

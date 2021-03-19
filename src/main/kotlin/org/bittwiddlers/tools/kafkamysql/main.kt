@@ -35,6 +35,7 @@ class Main {
   val keySerde = Serdes.StringSerde()
   val valueSerde = JacksonSerde.of(object : TypeReference<JsonObject>() {})
 
+  @Suppress("UNCHECKED_CAST")
   fun run(args: Array<String>) {
     env.extractFilesFromEnv()
     env.extractJavaProperties()
@@ -84,7 +85,7 @@ class Main {
     val scriptEngineManager = ScriptEngineManager(this::class.java.classLoader)
     val scriptEngine = scriptEngineManager.getEngineByName("groovy")!!
 
-    // evaluate main groovy file:
+    // configure the mapping:
     mappingRoot.configure(mappingPath.parent, scriptEngine)
 
     // build topology:
@@ -94,8 +95,8 @@ class Main {
       // downcast value type from LinkedHashMap<> to generic Map<>:
       val stream = streamExact as KStream<String, JsonObjectGeneral>
 
-      for (tableMapping in topic.value.mappings ?: emptyList()) {
-        tableMapping.configure(scriptEngine)
+      for ((i, tableMapping) in (topic.value.mappings ?: emptyList()).withIndex()) {
+        tableMapping.configure(topic.key, i, scriptEngine)
 
         // run filter and mapValues functions over this stream first at the message level:
         val processedStream = tableMapping.preprocess?.fold(stream) { str, step ->
@@ -106,9 +107,9 @@ class Main {
 
         // TODO: create a MySQL transaction at the message level here?
         // now process each table independently:
-        for (table in tableMapping.tables ?: emptyMap()) {
+        for (table in tableMapping.tables?.values ?: emptyList()) {
           // create the table once up front:
-          TablePopulator(ds, json, scriptEngine, table).use {
+          TablePopulator(ds, json, table).use {
             it.conn = ds.connection
             it.createTable()
           }
@@ -116,8 +117,8 @@ class Main {
           // populate the table:
           processedStream.process(
             // each stream thread instantiates its own TablePopulator instance so they can run in parallel:
-            { TablePopulator(ds, json, scriptEngine, table) },
-            Named.`as`("${table.key}")
+            { TablePopulator(ds, json, table) },
+            Named.`as`(table.tableName)
           )
         }
       }

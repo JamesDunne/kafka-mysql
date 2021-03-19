@@ -1,12 +1,15 @@
+# optional extra groovy code to evaluate in the script context:
 groovy: courses-mapping.groovy
 
 topics:
   'cr_course':
     mappings:
       - preprocess:
-        # these names refer to classes defined in the courses-mapping.groovy file:
-        - filter: CourseFilter
-        - map: CourseMap
+        # these are groovy functions
+        - filter: true
+        - map: |
+            v.taughtBy = v.taughtBy.findAll { it -> it.personId != null }
+            v
         tables:
           'course':
             mapped:
@@ -37,9 +40,11 @@ topics:
   'cr_person':
     mappings:
       - preprocess:
-        # these names refer to functions in the courses-mapping.groovy file:
-        - filter: PersonFilter
-        - map: PersonMap
+        # these are groovy functions
+        - filter: true
+        - map: |
+            v.advisedBy = v.advisedBy.findAll { it -> it.personId != null }
+            v
         tables:
           'person':
             mapped:

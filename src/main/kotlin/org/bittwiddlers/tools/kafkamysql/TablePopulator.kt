@@ -8,14 +8,12 @@ import java.sql.PreparedStatement
 import java.sql.SQLException
 import java.sql.SQLSyntaxErrorException
 import java.time.Instant
-import javax.script.ScriptEngine
 import javax.sql.DataSource
 
 class TablePopulator(
-  val ds: DataSource,
-  val json: ObjectMapper,
-  val scriptEngine: ScriptEngine,
-  val table: Map.Entry<String, Table>
+  private val ds: DataSource,
+  private val json: ObjectMapper,
+  val table: Table
 ) : Processor<String, JsonObjectGeneral>, AutoCloseable {
   private var now: Instant = Instant.now()
   var colCount: Int = 0
@@ -29,13 +27,13 @@ class TablePopulator(
 
   fun createTable() {
     val sql = StringBuilder()
-    sql.append("create table if not exists ${table.key} (\n")
+    sql.append("create table if not exists ${table.tableName} (\n")
 
     val cols = mutableListOf<String>()
     val pkNames = mutableListOf<String>()
 
-    val mapped = table.value.mapped
-    val flatMapped = table.value.flatMapped
+    val mapped = table.mapped
+    val flatMapped = table.flatMapped
 
     when {
       mapped != null -> {
@@ -54,7 +52,7 @@ class TablePopulator(
           cols.add("`${col.key}` ${typeToMysql(col.value.type!!)}")
         }
       }
-      else -> throw RuntimeException("Table mapping ${table.key} must have either `mapped` or `flatMapped` section defined")
+      else -> throw RuntimeException("Table mapping ${table.tableName} must have either `mapped` or `flatMapped` section defined")
     }
 
     sql.append(cols.joinToString(",\n  "))
@@ -80,8 +78,8 @@ class TablePopulator(
 
     colCount = 0
 
-    val mapped = table.value.mapped
-    val flatMapped = table.value.flatMapped
+    val mapped = table.mapped
+    val flatMapped = table.flatMapped
 
     if (flatMapped != null) {
       val columns = flatMapped.columns ?: emptyMap()
@@ -126,7 +124,7 @@ class TablePopulator(
     conn.autoCommit = false
 
     val sql = StringBuilder()
-    sql.append("insert into `${table.key}` (")
+    sql.append("insert into `${table.tableName}` (")
     sql.append(colsInsName.joinToString(","))
     sql.append(") values (")
     sql.append(colsInsValue.joinToString(","))
@@ -136,8 +134,8 @@ class TablePopulator(
   }
 
   override fun process(key: String, jsonRoot: JsonObjectGeneral) {
-    val flatMapped = table.value.flatMapped
-    val mapped = table.value.mapped
+    val flatMapped = table.flatMapped
+    val mapped = table.mapped
     if (flatMapped != null) {
       processFlatMapped(flatMapped, jsonRoot)
     } else if (mapped != null) {
@@ -147,12 +145,11 @@ class TablePopulator(
 
   private fun processMapped(mapped: MappedTable, jsonRoot: JsonObjectGeneral) {
     try {
-      var n = 1
       stmtInsert.clearParameters()
 
       addColValuesAsParams(
         stmtInsert,
-        n,
+        1,
         colCount,
         mapped.columns ?: emptyMap(),
         jsonRoot,
@@ -176,10 +173,9 @@ class TablePopulator(
     loop@ for (entityObj in entityObjects) {
       stmtInsert.clearParameters()
 
-      var n = 1
-      n = addColValuesAsParams(
+      addColValuesAsParams(
         stmtInsert,
-        n,
+        1,
         colCount,
         flatMapped.columns ?: emptyMap(),
         jsonRoot,
@@ -199,17 +195,18 @@ class TablePopulator(
 
         // delete entities not in the alive list:
         val whereClauseExprs = mutableListOf<String>()
-        whereClauseExprs.addAll(delWhere.map(Column::nameEqualsParamExpression) ?: emptyList())
+        whereClauseExprs.addAll(delWhere.map(Column::nameEqualsParamExpression))
         if (entityObjects.isNotEmpty()) {
           whereClauseExprs.add("`${delCol.columnName}` not in (${
             entityObjects.joinToString { delCol.paramExpression() }
           })")
         }
 
-        val delSql = "delete from `${table.key}` where ${whereClauseExprs.joinToString(" and ")}"
+        val delSql = "delete from `${table.tableName}` where ${whereClauseExprs.joinToString(" and ")}"
         conn.prepareStatement(delSql).use {
           // set the parameters for the where clause:
           var n = 1
+          // delete where :column=? and :column=? and ...
           for (col in delWhere) {
             col.paramSetterForColumn(
               it,
@@ -219,6 +216,7 @@ class TablePopulator(
             )(n)
             n++
           }
+          // and :column not in (?,?,?,...)
           for (entityObj in entityObjects) {
             delCol.paramSetterForColumn(
               it,
